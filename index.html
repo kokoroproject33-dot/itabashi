@@ -438,17 +438,16 @@
   const BOSS_WASTE_REDUCE_RATE = 0.30;
 
   const BOSS = {
-    n: "不法投棄キング",
-    h: 900,
-    a: 65,
-    s: 12,
-    x: 900,
-    e: "👑",
-    imgKey: null,
-    hpWeight: 0.8,
-    atkWeight: 0.7
-  };
-
+  n: "赤塚公園の不法投棄キング", // 好きな名前に変更OK
+  h: 900,
+  a: 65,
+  s: 12,
+  x: 900,
+  e: "👑",          // 画像が表示されない時の保険（任意）
+  imgKey: "enemy3", // ✅ この画像にするキー
+  hpWeight: 0.8,
+  atkWeight: 0.7
+};
   const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
   const floor1 = (v)=>Math.max(1, Math.floor(v));
 
