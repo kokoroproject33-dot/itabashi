@@ -1099,6 +1099,9 @@ if (state.collapse.supportUntil == null) state.collapse.supportUntil = 0;
   // 解除条件の保持タイマー（今回追加分）
   if (state.collapse.recoverHoldMs == null) state.collapse.recoverHoldMs = 0;
   if (state.collapse.recoverLastAt == null) state.collapse.recoverLastAt = 0;
+
+  // 崩壊フェーズ突入回数を記録するカウンタ
+  if (state.collapse.phaseCount == null) state.collapse.phaseCount = 0;
 }
 
   function showCollapseOverlay(ms = 2000) {
@@ -1126,6 +1129,8 @@ if (state.collapse.supportUntil == null) state.collapse.supportUntil = 0;
 
     state.collapse.active = true;
     state.collapse.enteredOnce = true;
+    // 崩壊フェーズ突入回数をインクリメント
+    state.collapse.phaseCount = (state.collapse.phaseCount || 0) + 1;
 
     const t = document.getElementById("collapse-text");
     if (t) {
@@ -1151,6 +1156,16 @@ if (state.collapse.supportUntil == null) state.collapse.supportUntil = 0;
     logMessage("⚠ 世界崩壊フェーズに突入…！");
     updateUI();
     saveGame();
+
+    // 崩壊フェーズ突入後、板橋によるメッセージを表示
+    // 少し時間を空けてオーバーレイと被らないようにする
+    setTimeout(() => {
+      try {
+        triggerCollapseItabashiEvent();
+      } catch (e) {
+        console.warn('Failed to trigger collapse Itabashi event', e);
+      }
+    }, 600);
   }
 
   // 解除条件（例）：環境/治安/健康が全て80%以上
@@ -3188,6 +3203,56 @@ if (ns) {
   ];
   var itabashiIndex = 0;
 
+  // =========================================================
+  // ✅ 崩壊フェーズ用の板橋イベントメッセージ
+  //    collapseItabashiMessages1: 崩壊フェーズ初回
+  //    collapseItabashiMessages2: 2回目
+  //    collapseItabashiMessagesFinal: 真エンディング前
+  // =========================================================
+  var collapseItabashiMessages1 = [
+    '……来てしまったか。',
+    'だが、まだ終わりじゃない。',
+    '今度こそ、食い止めよう。'
+  ];
+  var collapseItabashiMessages2 = [
+    'また、ここまで来たな。',
+    '大丈夫だ。',
+    '今回は、前より進める。'
+  ];
+  var collapseItabashiMessagesFinal = [
+    '……君は、諦めなかった。',
+    'もう、俺が導く必要はない。',
+    '行こう。終わらせに。'
+  ];
+  // 現在選択中の崩壊フェーズメッセージ配列
+  var collapseSelectedMessages = [];
+  // 崩壊フェーズイベントの表示インデックス
+  var collapseItabashiIndex = 0;
+
+  // =========================================================
+  // ✅ 真エンディング用の板橋告白イベントメッセージ
+  //    真エンディングで板橋が正体を明かし、消滅するイベント
+  // =========================================================
+  var trueEndingMessages = [
+    '……終わったな。\nもう、大丈夫だ。',
+    '君には、話しておく必要がある。',
+    '俺は、人間じゃない。\nこの街で生まれた\n心の集合体だ。',
+    '誰か一人の想いじゃない。\n諦めきれなかった声。\n後悔したまま消えた願い。\n「本当は、守りたかった」\nその全部が、俺になった。',
+    'この街は、何度も崩壊した。\nそのたびに、俺は時間を巻き戻し\n別の可能性を試した。',
+    '前の世界を覚えているのは……\n俺だけだ。',
+    'だが、どの世界でも\n最後に残るのは\n「諦め」だった。',
+    '君は違った。',
+    '失っても、やり直した。\n崩れても、立ち上がった。\n何度失敗しても\n君は、この街を見捨てなかった。',
+    'だから、俺は確信した。',
+    'もう、代理の心は必要ない。',
+    'この街の意思は\n君と、人々の中に根付いた。',
+    '俺の役目は\nここで終わりだ。',
+    '……ありがとう。',
+    'この街は、\nもう、大丈夫だ。',
+    '諦めない意思は、ここにある。'
+  ];
+  var trueEndingIndex = 0;
+
   // 板橋イベントを開始する
   function triggerItabashiEvent() {
     // すでに実行済みなら何もしない
@@ -3385,6 +3450,91 @@ if (ns) {
       setTimeout(() => { triggerTakashimadairaEvent(); }, 600);
     }
   }
+
+  // =========================================================
+  // ✅ 崩壊フェーズ板橋イベント処理
+  // =========================================================
+  // 崩壊フェーズ時の板橋イベントを開始する
+  function triggerCollapseItabashiEvent() {
+    // 選択するメッセージセットを決定
+    let count = (state.collapse && state.collapse.phaseCount) ? state.collapse.phaseCount : 1;
+    if (count === 1) {
+      collapseSelectedMessages = collapseItabashiMessages1;
+    } else if (count === 2) {
+      collapseSelectedMessages = collapseItabashiMessages2;
+    } else {
+      collapseSelectedMessages = collapseItabashiMessagesFinal;
+    }
+    collapseItabashiIndex = 0;
+    updateCollapseItabashiText();
+    const modal = document.getElementById('itabashi-modal');
+    if (!modal) return;
+    // タップ案内表示、選択肢非表示
+    const tapEl = document.getElementById('itabashi-tap');
+    const choicesEl = document.getElementById('itabashi-choices');
+    if (tapEl) tapEl.style.display = '';
+    if (choicesEl) choicesEl.style.display = 'none';
+    modal.style.display = 'flex';
+    // クリックで進行
+    modal.addEventListener('click', advanceCollapseItabashi);
+  }
+
+  // 崩壊フェーズ板橋イベントのメッセージを更新
+  function updateCollapseItabashiText() {
+    const textEl = document.getElementById('itabashi-text');
+    if (!textEl) return;
+    const msg = collapseSelectedMessages[collapseItabashiIndex] || '';
+    textEl.innerHTML = msg.replace(/\n/g, '<br>');
+  }
+
+  // 崩壊フェーズ板橋イベントのメッセージを進める
+  function advanceCollapseItabashi() {
+    collapseItabashiIndex++;
+    if (collapseItabashiIndex >= collapseSelectedMessages.length) {
+      const modal = document.getElementById('itabashi-modal');
+      if (!modal) return;
+      modal.removeEventListener('click', advanceCollapseItabashi);
+      modal.style.display = 'none';
+      return;
+    }
+    updateCollapseItabashiText();
+  }
+
+  // =========================================================
+  // ✅ 真エンディング板橋告白イベント処理
+  // =========================================================
+  function triggerTrueEndingItabashiEvent() {
+    trueEndingIndex = 0;
+    updateTrueEndingItabashiText();
+    const modal = document.getElementById('itabashi-modal');
+    if (!modal) return;
+    const tapEl = document.getElementById('itabashi-tap');
+    const choicesEl = document.getElementById('itabashi-choices');
+    if (tapEl) tapEl.style.display = '';
+    if (choicesEl) choicesEl.style.display = 'none';
+    modal.style.display = 'flex';
+    modal.addEventListener('click', advanceTrueEndingItabashi);
+  }
+
+  function updateTrueEndingItabashiText() {
+    const textEl = document.getElementById('itabashi-text');
+    if (!textEl) return;
+    const msg = trueEndingMessages[trueEndingIndex] || '';
+    textEl.innerHTML = msg.replace(/\n/g, '<br>');
+  }
+
+  function advanceTrueEndingItabashi() {
+    trueEndingIndex++;
+    if (trueEndingIndex >= trueEndingMessages.length) {
+      const modal = document.getElementById('itabashi-modal');
+      if (!modal) return;
+      modal.removeEventListener('click', advanceTrueEndingItabashi);
+      modal.style.display = 'none';
+      // 最終イベント後の後処理（必要ならここで板橋を永久削除など）
+      return;
+    }
+    updateTrueEndingItabashiText();
+  }
   // =========================================================
   // スキル機能の実装
   // =========================================================
@@ -3571,6 +3721,106 @@ if (ns) {
   }
 
   window.onload = init;
+
+  // -------------------------------------------------------------
+  // ✅ テストモードパネル
+  // URL に `?test` クエリが付いている場合、導入イベントや板橋イベントを手動で呼び出すためのパネルを表示します。
+  // 開発中の動作確認に便利です。
+  (function() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('test')) {
+        window.addEventListener('load', () => {
+          const panel = document.createElement('div');
+          panel.id = 'test-panel';
+          panel.style.position = 'fixed';
+          panel.style.top = '0';
+          panel.style.right = '0';
+          panel.style.zIndex = '5000';
+          panel.style.background = 'rgba(0,0,0,0.7)';
+          panel.style.padding = '8px';
+          panel.style.fontSize = '10px';
+          panel.style.color = '#fff';
+          panel.style.borderLeft = '1px solid rgba(255,255,255,0.2)';
+          panel.style.borderBottom = '1px solid rgba(255,255,255,0.2)';
+          panel.style.pointerEvents = 'auto';
+          panel.innerHTML = '<strong>TEST MODE</strong>';
+          const buttons = [
+            {
+              label: 'リセット導入',
+              action: () => {
+                localStorage.removeItem('introStoryShown');
+                localStorage.removeItem('introTutorialShown');
+                if (typeof showIntroIfNeeded === 'function') {
+                  showIntroIfNeeded();
+                }
+              }
+            },
+            {
+              label: '導入を表示',
+              action: () => {
+                if (typeof showIntroIfNeeded === 'function') {
+                  showIntroIfNeeded();
+                }
+              }
+            },
+            {
+              label: '板橋イベント①',
+              action: () => {
+                if (window.state && window.state.flags) {
+                  window.state.flags.itabashiEventDone = false;
+                }
+                if (typeof triggerItabashiEvent === 'function') {
+                  triggerItabashiEvent();
+                }
+              }
+            },
+            {
+              label: '板橋イベント②',
+              action: () => {
+                if (window.state && window.state.flags) {
+                  window.state.flags.takashimadairaEventDone = false;
+                }
+                if (typeof triggerTakashimadairaEvent === 'function') {
+                  triggerTakashimadairaEvent();
+                }
+              }
+            },
+            {
+              label: '正体告白',
+              action: () => {
+                if (typeof triggerTrueEndingItabashiEvent === 'function') {
+                  triggerTrueEndingItabashiEvent();
+                }
+              }
+            }
+          ];
+          buttons.forEach(({ label, action }) => {
+            const btn = document.createElement('button');
+            btn.innerText = label;
+            btn.style.display = 'block';
+            btn.style.marginTop = '4px';
+            btn.style.width = '100%';
+            btn.style.background = '#222';
+            btn.style.border = '1px solid #888';
+            btn.style.borderRadius = '2px';
+            btn.style.color = '#fff';
+            btn.style.fontSize = '10px';
+            btn.style.padding = '4px';
+            btn.style.cursor = 'pointer';
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              action();
+            });
+            panel.appendChild(btn);
+          });
+          document.body.appendChild(panel);
+        });
+      }
+    } catch (e) {
+      console.error('Test mode panel failed to initialize', e);
+    }
+  })();
 
 </script>
 
