@@ -611,6 +611,42 @@
   window.addEventListener('orientationchange', setAppHeightVar);
   setAppHeightVar();
 
+// =========================================================
+// ✅ 画像パスのフォールバック（GitHub Pagesでのファイル名違い対策）
+// =========================================================
+function attachImgFallback(selector, candidates) {
+  const el = document.querySelector(selector);
+  if (!el) return;
+  let i = 0;
+  el.addEventListener('error', () => {
+    i++;
+    if (i < candidates.length) el.src = candidates[i];
+  });
+}
+// 板橋キャラ（baseが無い/名前違いでも表示）
+attachImgFallback('#intro-modal img', ['assets/itabashi_base.png','assets/itabashi.png']);
+attachImgFallback('#itabashi-portrait', ['assets/itabashi_base.png','assets/itabashi.png']);
+// オープニング背景（ファイル名違いでも表示）
+// ※CSS背景はJSで差し替えないと効かないので、念のためチェックして差し替え
+(function(){
+  const bg = document.getElementById('opening-bg');
+  if (!bg) return;
+  const urls = ['assets/itabashi_opening.png','assets/itabashi_opening.PNG','assets/opening.png'];
+  // 先頭を仮指定（CSSで既に指定済みだが、ここで存在チェックしてダメなら差し替え）
+  let idx = 0;
+  const test = new Image();
+  test.onload = () => {}; // OKならそのまま
+  test.onerror = () => {
+    idx++;
+    if (idx < urls.length) {
+      bg.style.backgroundImage = `url("${urls[idx]}")`;
+      test.src = urls[idx];
+    }
+  };
+  test.src = urls[0];
+})();
+
+
   // =========================================================
   // 4ステ対応（ATK/DEF/SPD/LUK）
   // =========================================================
@@ -815,14 +851,14 @@
   const ASSET_PATH = "assets/";
 
   const ASSET_LIST = {
-    sy:     ASSET_PATH + "support/yuzuki/yuzuki.png",
-    sm:     ASSET_PATH + "support/mirako/mirako.png",
-    sf:     ASSET_PATH + "support/fromzero/fromzero.png",
+    sy:     ASSET_PATH + "yuzuki_dot.png",
+    sm:     ASSET_PATH + "yuzuki_dot.png",
+    sf:     ASSET_PATH + "yuzuki_dot.png",
 
     road:   ASSET_PATH + "road_tiles.png",
     build:  ASSET_PATH + "building_tiles.png",
     civic:  ASSET_PATH + "service_buildings.png",
-    player: ASSET_PATH + "player_sheet.jpg",
+    player: ASSET_PATH + "player_sheet.png",
     e1:     ASSET_PATH + "enemy_1_cutout.png",
     e2:     ASSET_PATH + "enemy_2_cutout.png",
     e3:     ASSET_PATH + "enemy_3_cutout.png",
